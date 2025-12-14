@@ -1,0 +1,272 @@
+@{
+    ViewData["Title"] = "Round-Robin Replica Demo";
+}
+
+<div class="row">
+    <div class="col-md-12">
+        <h1>Round-Robin Replica Load Balancing Demo</h1>
+        <p class="lead">This page demonstrates round-robin load balancing across 3 database replicas. Each read request
+            cycles through replicas 1, 2, and 3.</p>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Controls</h5>
+                <button id="startTestBtn" class="btn btn-primary btn-lg me-2">
+                    <span id="btnText">Start 1000 Calls Test</span>
+                </button>
+                <button id="clearBtn" class="btn btn-secondary btn-lg">Clear Results</button>
+                <div class="mt-3">
+                    <div class="progress" style="height: 30px; display: none;" id="progressContainer">
+                        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated"
+                            role="progressbar" style="width: 0%">
+                            <span id="progressText">0 / 1000</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Statistics</h5>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body text-center">
+                                <h3 id="totalCalls">0</h3>
+                                <p class="mb-0">Total Calls</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body text-center">
+                                <h3 id="replica1Count">0</h3>
+                                <p class="mb-0">Replica 1</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-info text-white">
+                            <div class="card-body text-center">
+                                <h3 id="replica2Count">0</h3>
+                                <p class="mb-0">Replica 2</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-white">
+                            <div class="card-body text-center">
+                                <h3 id="replica3Count">0</h3>
+                                <p class="mb-0">Replica 3</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Call Results</h5>
+                <div id="resultsContainer" style="max-height: 600px; overflow-y: auto;">
+                    <table class="table table-striped table-hover" id="resultsTable">
+                        <thead class="table-dark sticky-top">
+                            <tr>
+                                <th>#</th>
+                                <th>Timestamp</th>
+                                <th>Replica</th>
+                                <th>Status</th>
+                                <th>Product Count</th>
+                                <th>Response Time (ms)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsBody">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">No calls made yet. Click "Start 1000
+                                    Calls Test" to begin.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .replica-badge {
+        display: inline-block;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-weight: bold;
+        color: white;
+    }
+
+    .replica-1 {
+        background-color: #28a745;
+    }
+
+    .replica-2 {
+        background-color: #17a2b8;
+    }
+
+    .replica-3 {
+        background-color: #ffc107;
+        color: #333;
+    }
+
+    .status-success {
+        color: #28a745;
+        font-weight: bold;
+    }
+
+    .status-error {
+        color: #dc3545;
+        font-weight: bold;
+    }
+
+    #resultsTable {
+        font-size: 0.9rem;
+    }
+
+    #resultsTable thead {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        let callCount = 0;
+        let replicaCounts = { 1: 0, 2: 0, 3: 0 };
+        let isRunning = false;
+        const totalCalls = 1000;
+
+        document.getElementById('startTestBtn').addEventListener('click', async function () {
+            if (isRunning) {
+                return;
+            }
+
+            isRunning = true;
+            const btn = document.getElementById('startTestBtn');
+            const btnText = document.getElementById('btnText');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const resultsBody = document.getElementById('resultsBody');
+
+            // Clear previous results if needed
+            if (callCount === 0) {
+                resultsBody.innerHTML = '';
+            }
+
+            btn.disabled = true;
+            btnText.textContent = 'Running...';
+            progressContainer.style.display = 'block';
+
+            // Reset counters
+            callCount = 0;
+            replicaCounts = { 1: 0, 2: 0, 3: 0 };
+            updateStatistics();
+
+            // Make 1000 calls
+            for (let i = 0; i < totalCalls; i++) {
+                if (!isRunning) break;
+
+                const startTime = performance.now();
+
+                try {
+                    const response = await fetch('/Home/ReadFromReplica');
+                    const data = await response.json();
+                    const endTime = performance.now();
+                    const responseTime = Math.round(endTime - startTime);
+
+                    callCount++;
+
+                    if (data.success) {
+                        replicaCounts[data.replicaNumber]++;
+                        addResultRow(callCount, data.timestamp, data.replicaNumber, 'Success', data.productCount, responseTime);
+                    } else {
+                        addResultRow(callCount, data.timestamp, 'N/A', 'Error: ' + data.error, 0, responseTime);
+                    }
+                } catch (error) {
+                    const endTime = performance.now();
+                    const responseTime = Math.round(endTime - startTime);
+                    callCount++;
+                    addResultRow(callCount, new Date().toISOString(), 'N/A', 'Error: ' + error.message, 0, responseTime);
+                }
+
+                // Update progress
+                const progress = (callCount / totalCalls) * 100;
+                progressBar.style.width = progress + '%';
+                progressText.textContent = `${callCount} / ${totalCalls}`;
+
+                updateStatistics();
+
+                // Small delay to prevent overwhelming the server
+                if (i < totalCalls - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 10));
+                }
+            }
+
+            btn.disabled = false;
+            btnText.textContent = 'Start 1000 Calls Test';
+            isRunning = false;
+            progressContainer.style.display = 'none';
+        });
+
+        document.getElementById('clearBtn').addEventListener('click', function () {
+            if (isRunning) {
+                return;
+            }
+
+            callCount = 0;
+            replicaCounts = { 1: 0, 2: 0, 3: 0 };
+            document.getElementById('resultsBody').innerHTML =
+                '<tr><td colspan="6" class="text-center text-muted">No calls made yet. Click "Start 1000 Calls Test" to begin.</td></tr>';
+            updateStatistics();
+        });
+
+        function addResultRow(callNumber, timestamp, replicaNumber, status, productCount, responseTime) {
+            const tbody = document.getElementById('resultsBody');
+
+            // Remove placeholder row if exists
+            const placeholder = tbody.querySelector('td[colspan]');
+            if (placeholder) {
+                tbody.innerHTML = '';
+            }
+
+            const row = document.createElement('tr');
+
+            const replicaBadge = replicaNumber !== 'N/A'
+                ? `<span class="replica-badge replica-${replicaNumber}">Replica ${replicaNumber}</span>`
+                : '<span class="text-muted">N/A</span>';
+
+            const statusClass = status === 'Success' ? 'status-success' : 'status-error';
+
+            row.innerHTML = `
+                        <td>${callNumber}</td>
+                        <td>${timestamp}</td>
+                        <td>${replicaBadge}</td>
+                        <td class="${statusClass}">${status}</td>
+                        <td>${productCount}</td>
+                        <td>${responseTime}</td>
+                    `;
+
+            tbody.appendChild(row);
+
+            // Auto-scroll to bottom
+            const container = document.getElementById('resultsContainer');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function updateStatistics() {
+            document.getElementById('totalCalls').textContent = callCount;
+            document.getElementById('replica1Count').textContent = replicaCounts[1];
+            document.getElementById('replica2Count').textContent = replicaCounts[2];
+            document.getElementById('replica3Count').textContent = replicaCounts[3];
+        }
+    </script>
+}

@@ -1,0 +1,112 @@
+@{
+    ViewData["Title"] = "Architecture Diagram";
+}
+
+<h1>System Architecture</h1>
+
+<div class="architecture-diagram">
+    <div class="component write-app">
+        <h3>CQRS Write App</h3>
+        <p>ASP.NET Core MVC</p>
+        <div class="connection">writes to</div>
+    </div>
+    
+    <div class="component leader-db">
+        <h3>Leader Database</h3>
+        <p>PostgreSQL (Writes)</p>
+        <div class="connection">streams changes via</div>
+    </div>
+    
+    <div class="component debezium">
+        <h3>Debezium</h3>
+        <p>Change Data Capture</p>
+        <div class="connection">publishes events to</div>
+    </div>
+    
+    <div class="component redpanda">
+        <h3>Redpanda</h3>
+        <p>Message Broker</p>
+        <div class="connection">consumed by</div>
+    </div>
+    
+    <div class="component consumer-app">
+        <h3>Consumer App</h3>
+        <p>.NET Console App</p>
+        <div class="connection">reads and replicates to</div>
+    </div>
+    
+    <div class="component read-replicas">
+        <h3>Read Replicas</h3>
+        <p>PostgreSQL (3 instances)</p>
+    </div>
+</div>
+
+<style>
+    .architecture-diagram {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        padding: 20px;
+    }
+    
+    .component {
+        border: 2px solid #007bff;
+        border-radius: 10px;
+        padding: 20px;
+        width: 300px;
+        text-align: center;
+        background-color: #f8f9fa;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .component h3 {
+        margin-top: 0;
+        color: #007bff;
+    }
+    
+    .component p {
+        margin: 10px 0;
+        color: #666;
+    }
+    
+    .connection {
+        position: relative;
+        margin: 15px 0;
+        color: #28a745;
+        font-weight: bold;
+    }
+    
+    .connection:before {
+        content: "↓";
+        position: absolute;
+        top: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 24px;
+    }
+    
+    .write-app {
+        border-color: #007bff;
+    }
+    
+    .leader-db {
+        border-color: #28a745;
+    }
+    
+    .debezium {
+        border-color: #ffc107;
+    }
+    
+    .redpanda {
+        border-color: #fd7e14;
+    }
+    
+    .consumer-app {
+        border-color: #6f42c1;
+    }
+    
+    .read-replicas {
+        border-color: #dc3545;
+    }
+</style>

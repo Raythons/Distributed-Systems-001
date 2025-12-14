@@ -1,0 +1,126 @@
+@{
+    ViewData["Title"] = "System Status";
+}
+
+<h1>System Status</h1>
+
+<div id="system-status">
+    <div class="loading">Loading system status...</div>
+</div>
+
+<style>
+    .database-status {
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 15px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .database-status.connected {
+        border-left: 5px solid #28a745;
+    }
+    
+    .database-status.disconnected {
+        border-left: 5px solid #dc3545;
+    }
+    
+    .status-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    
+    .status-title {
+        font-size: 1.2em;
+        font-weight: bold;
+    }
+    
+    .status-badge {
+        padding: 5px 10px;
+        border-radius: 15px;
+        color: white;
+        font-weight: bold;
+    }
+    
+    .status-badge.connected {
+        background-color: #28a745;
+    }
+    
+    .status-badge.disconnected {
+        background-color: #dc3545;
+    }
+    
+    .product-count {
+        font-size: 0.9em;
+        color: #666;
+    }
+    
+    .error-message {
+        color: #dc3545;
+        font-size: 0.9em;
+        margin-top: 10px;
+        padding: 10px;
+        background-color: #f8d7da;
+        border-radius: 4px;
+    }
+    
+    .loading {
+        text-align: center;
+        padding: 20px;
+        color: #666;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        loadSystemStatus();
+        // Refresh every 5 seconds
+        setInterval(loadSystemStatus, 5000);
+    });
+    
+    function loadSystemStatus() {
+        fetch('/Home/GetSystemStatus')
+            .then(response => response.json())
+            .then(data => {
+                const container = document.getElementById('system-status');
+                container.innerHTML = '';
+                
+                // Display leader database status
+                container.appendChild(createDatabaseStatusElement(data.leaderDb));
+                
+                // Display replica statuses
+                container.appendChild(createDatabaseStatusElement(data.replica1));
+                container.appendChild(createDatabaseStatusElement(data.replica2));
+                container.appendChild(createDatabaseStatusElement(data.replica3));
+            })
+            .catch(error => {
+                console.error('Error loading system status:', error);
+                document.getElementById('system-status').innerHTML = 
+                    '<div class="error-message">Error loading system status: ' + error.message + '</div>';
+            });
+    }
+    
+    function createDatabaseStatusElement(dbStatus) {
+        const div = document.createElement('div');
+        div.className = `database-status ${dbStatus.status.toLowerCase()}`;
+        
+        const connected = dbStatus.status === 'Connected';
+        
+        div.innerHTML = `
+            <div class="status-header">
+                <div class="status-title">${dbStatus.name}</div>
+                <div class="status-badge ${dbStatus.status.toLowerCase()}">
+                    ${dbStatus.status}
+                </div>
+            </div>
+            <div class="product-count">
+                Products: ${dbStatus.productCount}
+            </div>
+            ${dbStatus.error ? `<div class="error-message">${dbStatus.error}</div>` : ''}
+        `;
+        
+        return div;
+    }
+</script>

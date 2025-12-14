@@ -1,0 +1,42 @@
+{
+  "name": "cqrs-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "tasks.max": "1",
+
+    "database.hostname": "postgres-leader",
+    "database.port": "5432",
+    "database.user": "admin",
+    "database.password": "password",
+    "database.dbname": "cqrs_leader",
+
+    "database.server.name": "cqrs_server",
+
+    "plugin.name": "pgoutput",
+
+    "slot.name": "debezium_slot",
+    "publication.name": "debezium_pub",
+
+    "schema.include.list": "public",
+    "table.include.list": "public.products",
+
+    "topic.prefix": "cqrs",
+
+    "topic.creation.enabled": "true",
+    "topic.creation.default.replication.factor": "1",
+    "topic.creation.default.partitions": "1",
+
+    "transforms": "unwrap",
+    "transforms.unwrap.type": "io.debezium.transforms.ExtractNewRecordState",
+
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": "false",
+    "value.converter.schemas.enable": "false",
+
+    "poll.interval.ms": "1000",
+
+    "tombstones.on.delete": "false",
+    "slot.drop.on.stop": "false"
+  }
+}

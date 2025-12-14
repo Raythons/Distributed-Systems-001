@@ -1,0 +1,197 @@
+@model IEnumerable<cqrs_write_app.Models.Product>
+@{
+    ViewData["Title"] = "Products";
+}
+
+<div class="row">
+    <div class="col-md-12">
+        <h1>Products</h1>
+        <p>
+            <a asp-action="Create" class="btn btn-primary">Create New Product</a>
+        </p>
+        
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                @TempData["Success"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+        
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                @TempData["Error"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+        
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Price</th>
+                    <th>Quantity</th>
+                    <th>Database Sync Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.Id</td>
+                            <td>@item.Name</td>
+                            <td>$@item.Price.ToString("F2")</td>
+                            <td>@item.Quantity</td>
+                            <td>
+                                <div class="sync-status-container" data-product-id="@item.Id">
+                                    <div class="database-diagram">
+                                        <div class="leader-db">Leader</div>
+                                        <div class="arrow">→</div>
+                                        <div class="replicas">
+                                            <span class="replica replica-1" title="Replica 1">R1</span>
+                                            <span class="replica replica-2" title="Replica 2">R2</span>
+                                            <span class="replica replica-3" title="Replica 3">R3</span>
+                                        </div>
+                                    </div>
+                                    <div class="sync-indicators">
+                                        <span class="indicator replica-1-indicator" title="Replica 1 Status">●</span>
+                                        <span class="indicator replica-2-indicator" title="Replica 2 Status">●</span>
+                                        <span class="indicator replica-3-indicator" title="Replica 3 Status">●</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">Edit</a>
+                                <form asp-action="Delete" asp-route-id="@item.Id" method="post" style="display:inline;">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this product?')">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="text-center">No products found</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+    .sync-status-container {
+        min-width: 200px;
+    }
+    
+    .database-diagram {
+        display: flex;
+        align-items: center;
+        margin-bottom: 5px;
+    }
+    
+    .leader-db {
+        background-color: #007bff;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: bold;
+    }
+    
+    .arrow {
+        margin: 0 10px;
+        font-size: 16px;
+    }
+    
+    .replicas {
+        display: flex;
+        gap: 5px;
+    }
+    
+    .replica {
+        background-color: #6c757d;
+        color: white;
+        padding: 5px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: bold;
+    }
+    
+    .sync-indicators {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+    }
+    
+    .indicator {
+        font-size: 20px;
+        cursor: help;
+    }
+    
+    .indicator.synced {
+        color: #28a745; /* Green */
+    }
+    
+    .indicator.under-sync {
+        color: #ffc107; /* Yellow */
+    }
+    
+    .indicator.error {
+        color: #dc3545; /* Red */
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Update sync status for all products
+        updateAllSyncStatuses();
+        
+        // Refresh every 3 seconds
+        setInterval(updateAllSyncStatuses, 3000);
+    });
+    
+    function updateAllSyncStatuses() {
+        document.querySelectorAll('.sync-status-container').forEach(container => {
+            const productId = container.getAttribute('data-product-id');
+            updateSyncStatus(productId, container);
+        });
+    }
+    
+    function updateSyncStatus(productId, container) {
+        fetch(`/Home/GetSyncStatus?productId=${productId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.error('Error fetching sync status:', data.error);
+                    return;
+                }
+                
+                const statuses = data.statuses;
+                statuses.forEach(status => {
+                    const indicator = container.querySelector(`.replica-${status.replicaId}-indicator`);
+                    if (indicator) {
+                        if (status.error) {
+                            indicator.className = 'indicator error';
+                            indicator.title = `Replica ${status.replicaId}: Error - ${status.error}`;
+                        } else if (status.isSynced) {
+                            indicator.className = 'indicator synced';
+                            indicator.title = `Replica ${status.replicaId}: Fully Synced`;
+                        } else {
+                            indicator.className = 'indicator under-sync';
+                            indicator.title = `Replica ${status.replicaId}: Under Sync`;
+                        }
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching sync status:', error);
+            });
+    }
+</script>

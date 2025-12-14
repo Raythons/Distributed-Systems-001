@@ -1,0 +1,41 @@
+# Redpanda configuration
+redpanda:
+  data_directory: /var/lib/redpanda/data
+  seed_servers: []
+  rpc_server:
+    address: 0.0.0.0
+    port: 33145
+  advertised_rpc_api:
+    address: redpanda
+    port: 33145
+  kafka_api:
+    - address: 0.0.0.0
+      port: 9092
+  advertised_kafka_api:
+    - address: redpanda
+      port: 9092
+  admin:
+    - address: 0.0.0.0
+      port: 9644
+  developer_mode: true
+
+pandaproxy: 
+  pandaproxy_api:
+    - address: 0.0.0.0
+      port: 8082
+  advertised_pandaproxy_api:
+    - address: redpanda
+      port: 8082
+
+schema_registry:
+  schema_registry_api:
+    - address: 0.0.0.0
+      port: 8081
+
+rpk:
+  enable_usage_stats: true
+  tune_network: true
+  tune_disk_scheduler: true
+  tune_disk_nomerges: true
+  tune_disk_write_cache: true
+  tune_vm: true

@@ -51,10 +51,6 @@ This project demonstrates a distributed CQRS (Command Query Responsibility Segre
    ./start-system.sh
    ```
 
-3. Simulate the workflow:
-   ```bash
-   ./simulate-workflow.sh
-   ```
 
 ## How It Works
 
@@ -85,5 +81,6 @@ You can monitor the system by:
    ```
 
 2. Connecting to the databases directly with a PostgreSQL client
+
 
 3. Using Redpanda's console to view topics and messages

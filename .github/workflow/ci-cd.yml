@@ -1,0 +1,70 @@
+name: CI / CD Pipeline
+
+# 1️⃣ When this pipeline runs
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# 2️⃣ Jobs definition
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    # 3️⃣ External services needed during CI
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: admin
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: cqrs_leader
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U admin"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redpanda:
+        image: redpandadata/redpanda:v25.2.12-fips
+        ports:
+          - 9092:9092
+
+    # 4️⃣ Pipeline steps
+    steps:
+      # Step 1: Get repository code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Install .NET SDK
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      # Step 3: Restore NuGet packages
+      - name: Restore dependencies
+        run: dotnet restore
+
+      # Step 4: Build CQRS Write App
+      - name: Build CQRS Write App
+        run: dotnet build ./cqrs-write-app --no-restore
+
+      # Step 5: Test CQRS Write App
+      - name: Test CQRS Write App
+        run: dotnet test ./cqrs-write-app.Tests --no-build
+
+      # Step 6: Build Consumer App
+      - name: Build Consumer App
+        run: dotnet build ./consumer-app --no-restore
+
+      # Step 7: Test Consumer App
+      - name: Test Consumer App
+        run: dotnet test ./consumer-app.Tests --no-build
+
+      # Step 8: Build Docker images
+      - name: Build Docker images
+        run: docker-compose build

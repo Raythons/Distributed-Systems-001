@@ -1,168 +1,4 @@
-# version: '3.8'
 
-# services:
-#   # PostgreSQL Leader Database
-#   postgres-leader:
-#     image: postgres:16
-#     container_name: postgres-leader
-#     environment:
-#       POSTGRES_DB: cqrs_leader
-#       POSTGRES_USER: admin
-#       POSTGRES_PASSWORD: password
-#     command:
-#       - "postgres"
-#       - "-c"
-#       - "wal_level=logical" # <-- Enables logical replication (The fix)
-#       - "-c"
-#       - "max_replication_slots=10" # <-- Required by Debezium
-#       - "-c"
-#       - "max_wal_senders=10" # <-- Required by Debezium
-#     ports:
-#       - "5432:5432"
-#     volumes:
-#       - postgres_leader_data:/var/lib/postgresql/data
-#       - ./postgres/init-scripts:/docker-entrypoint-initdb.d
-#     networks:
-#       - app-network
-
-#   # PostgreSQL Read Replica 1
-#   postgres-replica-1:
-#     image: postgres:16
-#     container_name: postgres-replica-1
-#     environment:
-#       POSTGRES_DB: cqrs_read
-#       POSTGRES_USER: admin
-#       POSTGRES_PASSWORD: password
-#     ports:
-#       - "5433:5432"
-#     volumes:
-#       - postgres_replica_1_data:/var/lib/postgresql/data
-#       - ./postgres/read-replica-scripts:/docker-entrypoint-initdb.d
-#     networks:
-#       - app-network
-
-#   # PostgreSQL Read Replica 2
-#   postgres-replica-2:
-#     image: postgres:16
-#     container_name: postgres-replica-2
-#     environment:
-#       POSTGRES_DB: cqrs_read
-#       POSTGRES_USER: admin
-#       POSTGRES_PASSWORD: password
-#     ports:
-#       - "5434:5432"
-#     volumes:
-#       - postgres_replica_2_data:/var/lib/postgresql/data
-#       - ./postgres/read-replica-scripts:/docker-entrypoint-initdb.d
-#     networks:
-#       - app-network
-
-#   # PostgreSQL Read Replica 3
-#   postgres-replica-3:
-#     image: postgres:16
-#     container_name: postgres-replica-3
-#     environment:
-#       POSTGRES_DB: cqrs_read
-#       POSTGRES_USER: admin
-#       POSTGRES_PASSWORD: password
-#     ports:
-#       - "5435:5432"
-#     volumes:
-#       - postgres_replica_3_data:/var/lib/postgresql/data
-#       - ./postgres/read-replica-scripts:/docker-entrypoint-initdb.d
-#     networks:
-#       - app-network
-
-#   # Debezium Connect
-#   debezium-connect:
-#     image: debezium/connect:2.7.3.Final
-#     container_name: debezium-connect
-#     depends_on:
-#       - postgres-leader
-#       - redpanda
-#     environment:
-#       BOOTSTRAP_SERVERS: redpanda:9092
-#       GROUP_ID: 1
-#       CONFIG_STORAGE_TOPIC: connect_configs
-#       OFFSET_STORAGE_TOPIC: connect_offsets
-#       STATUS_STORAGE_TOPIC: connect_statuses
-#       KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
-#       VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
-#       CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "false"
-#       CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
-#     ports:
-#       - "8083:8083"
-#     networks:
-#       - app-network
-
-#   # Redpanda
-#   redpanda:
-#     image: redpandadata/redpanda:v25.2.12-fips
-#     container_name: redpanda
-#     command:
-#       - redpanda
-#       - start
-#       - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
-#       - --advertise-kafka-addr internal://redpanda:9092,external://localhost:19092
-#       - --pandaproxy-addr internal://0.0.0.0:8082,external://0.0.0.0:18082
-#       - --advertise-pandaproxy-addr internal://redpanda:8082,external://localhost:18082
-#       - --schema-registry-addr internal://0.0.0.0:8081,external://0.0.0.0:18081
-#       - --rpc-addr redpanda:33145
-#       - --advertise-rpc-addr redpanda:33145
-#     ports:
-#       - "18081:18081"
-#       - "18082:18082"
-#       - "19092:19092"
-#       - "9644:9644"
-#     volumes:
-#       - redpanda_data:/var/lib/redpanda/data
-#     networks:
-#       - app-network
-
-#   # ASP.NET Core MVC Application (CQRS Write Side)
-#   cqrs-write-app:
-#     image: mcr.microsoft.com/dotnet/sdk:9.0
-#     container_name: cqrs-write-app
-#     depends_on:
-#       - postgres-leader
-#     ports:
-#       - "8080:80"
-#     volumes:
-#       - ./cqrs-write-app:/app
-#     working_dir: /app
-#     environment:
-#       - ASPNETCORE_ENVIRONMENT=Container
-#       - ASPNETCORE_URLS=http://+:80
-#     command: dotnet run
-#     networks:
-#       - app-network
-
-#   # Consumer Application (reads from Redpanda and writes to read replicas)
-#   consumer-app:
-#     image: mcr.microsoft.com/dotnet/sdk:9.0
-#     container_name: consumer-app
-#     depends_on:
-#       - redpanda
-#       - postgres-replica-1
-#       - postgres-replica-2
-#       - postgres-replica-3
-#     volumes:
-#       - ./consumer-app:/app
-#     working_dir: /app
-#     command: dotnet run
-#     networks:
-#       - app-network
-
-# volumes:
-#   postgres_leader_data:
-#   postgres_replica_1_data:
-#   postgres_replica_2_data:
-#   postgres_replica_3_data:
-#   redpanda_data:
-
-# networks:
-#   app-network:
-#     driver: bridge
 version: '3.8'
 
 services:
@@ -293,12 +129,14 @@ services:
     ports:
       - "8080:80"
     volumes:
-      - ./cqrs-write-app:/app
+      - ./cqrs-write-app:/app/cqrs-write-app
+      - ./cqrs-write-app.Tests:/app/cqrs-write-app.Tests
     working_dir: /app
     environment:
       - ASPNETCORE_ENVIRONMENT=Container
       - ASPNETCORE_URLS=http://+:80
-    command: dotnet run
+    # Build cqrs-write-app, then build and test cqrs-write-app.Tests, then run cqrs-write-app
+    command: bash -c "cd cqrs-write-app && dotnet build && cd ../cqrs-write-app.Tests && dotnet build && dotnet test && cd ../cqrs-write-app && dotnet run"
     networks:
       - app-network
 
@@ -312,9 +150,11 @@ services:
       - postgres-replica-2
       - postgres-replica-3
     volumes:
-      - ./consumer-app:/app
+      - ./consumer-app:/app/consumer-app
+      - ./consumer-app.Tests:/app/consumer-app.Tests
     working_dir: /app
-    command: dotnet run
+    # Build consumer-app, then build and test consumer-app.Tests, then run consumer-app
+    command: bash -c "cd consumer-app && dotnet build && cd ../consumer-app.Tests && dotnet build && dotnet test && cd ../consumer-app && dotnet run"
     networks:
       - app-network
 

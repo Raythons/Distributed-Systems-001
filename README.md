@@ -192,23 +192,6 @@ docker-compose logs -f debezium-connect
 docker-compose logs -f cqrs-write-app
 ```
 
-### Check Database Connections
-Connect to any database using a PostgreSQL client:
-```bash
-# Leader
-psql -h localhost -p 5432 -U admin -d cqrs_leader
-
-# Replica 1
-psql -h localhost -p 5433 -U admin -d cqrs_read
-
-# Replica 2
-psql -h localhost -p 5434 -U admin -d cqrs_read
-
-# Replica 3
-psql -h localhost -p 5435 -U admin -d cqrs_read
-```
-
-Password: `password`
 
 ### Check Debezium Connector Status
 ```bash
@@ -219,6 +202,9 @@ curl http://localhost:8083/connectors/postgres-connector/status
 ```bash
 docker-compose exec redpanda rpk topic list
 ```
+
+### Using Redpanda Console
+You can use Redpanda's console to view topics and messages in a web interface.
 
 ## Stopping the System
 
@@ -268,13 +254,8 @@ docker-compose down -v
 └── README.md                # This file
 ```
 
-## Next Steps
-
-1. **Create Products**: Use the web UI to create, update, and delete products
-2. **Monitor Replication**: Watch the consumer app logs to see replication in action
-3. **Test Round-Robin**: Use the Demo page to make 1000 calls and see load distribution
-4. **Scale Replicas**: Add more read replicas by extending the docker-compose.yml file
 
 ## License
 
 This is a demonstration project for educational purposes.
+

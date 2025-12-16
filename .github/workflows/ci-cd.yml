@@ -55,7 +55,7 @@ jobs:
 
       # Step 5: Test CQRS Write App
       - name: Test CQRS Write App
-        run: dotnet test ./cqrs-write-app.Tests --no-build
+        run: dotnet test ./cqrs-write-app.Tests --no-restore --verbosity normal
 
       # Step 6: Build Consumer App
       - name: Build Consumer App
@@ -63,7 +63,7 @@ jobs:
 
       # Step 7: Test Consumer App
       - name: Test Consumer App
-        run: dotnet test ./consumer-app.Tests --no-build
+        run: dotnet test ./consumer-app.Tests --no-restore --verbosity normal
 
       # Step 8: Build Docker images
       - name: Build Docker images

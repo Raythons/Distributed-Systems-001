@@ -122,39 +122,33 @@ services:
 
   # ASP.NET Core MVC Application (CQRS Write Side)
   cqrs-write-app:
-    image: mcr.microsoft.com/dotnet/sdk:9.0
+    build:
+      context: ./cqrs-write-app
+      dockerfile: Dockerfile
+    image: cqrs-write-app:latest
     container_name: cqrs-write-app
     depends_on:
       - postgres-leader
     ports:
       - "8080:80"
-    volumes:
-      - ./cqrs-write-app:/app/cqrs-write-app
-      - ./cqrs-write-app.Tests:/app/cqrs-write-app.Tests
-    working_dir: /app
     environment:
       - ASPNETCORE_ENVIRONMENT=Container
       - ASPNETCORE_URLS=http://+:80
-    # Build cqrs-write-app, then build and test cqrs-write-app.Tests, then run cqrs-write-app
-    command: bash -c "cd cqrs-write-app && dotnet build && cd ../cqrs-write-app.Tests && dotnet build && dotnet test && cd ../cqrs-write-app && dotnet run"
     networks:
       - app-network
 
   # Consumer Application
   consumer-app:
-    image: mcr.microsoft.com/dotnet/sdk:9.0
+    build:
+      context: ./consumer-app
+      dockerfile: Dockerfile
+    image: consumer-app:latest
     container_name: consumer-app
     depends_on:
       - redpanda
       - postgres-replica-1
       - postgres-replica-2
       - postgres-replica-3
-    volumes:
-      - ./consumer-app:/app/consumer-app
-      - ./consumer-app.Tests:/app/consumer-app.Tests
-    working_dir: /app
-    # Build consumer-app, then build and test consumer-app.Tests, then run consumer-app
-    command: bash -c "cd consumer-app && dotnet build && cd ../consumer-app.Tests && dotnet build && dotnet test && cd ../consumer-app && dotnet run"
     networks:
       - app-network
 

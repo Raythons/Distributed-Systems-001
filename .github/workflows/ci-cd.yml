@@ -68,3 +68,27 @@ jobs:
       # Step 8: Build Docker images
       - name: Build Docker images
         run: docker-compose build
+
+      # Step 9: Login to Docker Hub (only on main branch pushes)
+      - name: Login to Docker Hub
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # Step 10: Tag and Push images to Docker Hub
+      - name: Push Docker images
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          # Tag images with your Docker Hub username
+          docker tag cqrs-write-app:latest ${{ secrets.DOCKER_USERNAME }}/cqrs-write-app:latest
+          docker tag cqrs-write-app:latest ${{ secrets.DOCKER_USERNAME }}/cqrs-write-app:${{ github.sha }}
+          docker tag consumer-app:latest ${{ secrets.DOCKER_USERNAME }}/consumer-app:latest
+          docker tag consumer-app:latest ${{ secrets.DOCKER_USERNAME }}/consumer-app:${{ github.sha }}
+          
+          # Push to Docker Hub
+          docker push ${{ secrets.DOCKER_USERNAME }}/cqrs-write-app:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/cqrs-write-app:${{ github.sha }}
+          docker push ${{ secrets.DOCKER_USERNAME }}/consumer-app:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/consumer-app:${{ github.sha }}

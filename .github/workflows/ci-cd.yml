@@ -67,7 +67,7 @@ jobs:
 
       # Step 8: Build Docker images
       - name: Build Docker images
-        run: docker-compose build
+        run: docker compose build
 
       # Step 9: Login to Docker Hub (only on main branch pushes)
       - name: Login to Docker Hub
